@@ -1,0 +1,16 @@
+import { NextApiRequest, NextApiResponse } from 'next'
+import { getServicios } from '../queries'
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ message: 'Method not allowed' })
+  }
+
+  try {
+    const servicios = await getServicios()
+    res.status(200).json(servicios)
+  } catch (error) {
+    console.error('Error fetching servicios:', error)
+    res.status(500).json({ message: 'Error interno del servidor' })
+  }
+}

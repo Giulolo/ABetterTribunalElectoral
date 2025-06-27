@@ -1,0 +1,125 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+
+enum Genero {
+  Masculino
+  Femenino
+  Otro
+}
+
+enum EstadoCedulacion {
+  pendiente
+  en_proceso
+  listo
+  entregado
+  cancelado
+}
+
+enum EstadoPago {
+  pendiente
+  pagado
+  cancelado
+}
+
+
+
+
+model Servicio {
+  id            Int      @id @default(autoincrement())
+  nombre        String   @db.VarChar(255)
+  descripcion   String?  @db.Text
+  precio        Decimal  @db.Decimal(10, 2)
+  tipoServicio  String   @map("tipo_servicio") @db.VarChar(100)
+  activo        Boolean  @default(true)
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  facturaDetalles FacturaDetalle[]
+
+  @@map("servicios")
+}
+
+model Tribunal {
+  id                    Int      @id @default(autoincrement())
+  nombre                String   @db.VarChar(255)
+  provincia             String   @db.VarChar(100)
+  direccion             String?  @db.Text
+  telefono              String?  @db.VarChar(20)
+  horarioAtencion       String?  @map("horario_atencion") @db.VarChar(100)
+  tipoEstablecimiento   String?  @map("tipo_establecimiento") @db.VarChar(50)
+  activo                Boolean  @default(true)
+  createdAt             DateTime @default(now()) @map("created_at")
+
+  cedulaciones Cedulacion[]
+
+  @@map("tribunales")
+}
+
+model Cedulacion {
+  id                    Int       @id @default(autoincrement())
+  nombreCompleto        String    @map("nombre_completo") @db.VarChar(255)
+  cedulaOriginal        String?   @map("cedula_original") @db.VarChar(20)
+  fechaNacimiento       DateTime  @map("fecha_nacimiento") @db.Date
+  lugarNacimiento       String    @map("lugar_nacimiento") @db.VarChar(255)
+  genero                Genero
+  fotoUrl               String?   @map("foto_url") @db.VarChar(500)
+  fechaSolicitud        DateTime  @default(now()) @map("fecha_solicitud")
+  estado                EstadoCedulacion @default(pendiente)
+  tribunalId            Int       @map("tribunal_id")
+  fechaEntregaEstimada  DateTime? @map("fecha_entrega_estimada") @db.Date
+  cedulaNueva           String?   @map("cedula_nueva") @db.VarChar(20)
+  observaciones         String?   @db.Text
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  tribunal  Tribunal @relation(fields: [tribunalId], references: [id])
+  facturas  Factura[]
+
+  @@map("cedulaciones")
+}
+
+model Factura {
+  id              Int         @id @default(autoincrement())
+  cedulacionId    Int         @map("cedulacion_id")
+  numeroFactura   String      @unique @map("numero_factura") @db.VarChar(50)
+  subtotal        Decimal     @db.Decimal(10, 2)
+  impuestos       Decimal     @default(0) @db.Decimal(10, 2)
+  total           Decimal     @db.Decimal(10, 2)
+  estadoPago      EstadoPago  @default(pendiente) @map("estado_pago")
+  metodoPago      String?     @map("metodo_pago") @db.VarChar(50)
+  fechaPago       DateTime?   @map("fecha_pago")
+  createdAt       DateTime    @default(now()) @map("created_at")
+
+  cedulacion      Cedulacion @relation(fields: [cedulacionId], references: [id])
+  facturaDetalles FacturaDetalle[]
+
+  @@map("facturas")
+}
+
+model FacturaDetalle {
+  id              Int     @id @default(autoincrement())
+  facturaId       Int     @map("factura_id")
+  servicioId      Int     @map("servicio_id")
+  cantidad        Int     @default(1)
+  precioUnitario  Decimal @map("precio_unitario") @db.Decimal(10, 2)
+  subtotal        Decimal @db.Decimal(10, 2)
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  factura   Factura  @relation(fields: [facturaId], references: [id])
+  servicio  Servicio @relation(fields: [servicioId], references: [id])
+
+  @@map("factura_detalles")
+}
